@@ -1,0 +1,50 @@
+{
+  "allFiles": [
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/FingerSpy/app/src/main/AndroidManifest.xml",
+      "selection": {
+        "end": {
+          "column": 0,
+          "index": 963,
+          "line": 24
+        },
+        "start": {
+          "column": 0,
+          "index": 963,
+          "line": 24
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/FingerSpy/app/src/main/kotlin/com/xthan/fingerspy/MainActivity.kt",
+      "selection": {
+        "end": {
+          "column": 0,
+          "index": 28,
+          "line": 1
+        },
+        "start": {
+          "column": 0,
+          "index": 28,
+          "line": 1
+        }
+      }
+    },
+    {
+      "file": "/storage/emulated/0/AndroidIDEProjects/FingerSpy/app/src/main/res/layout/activity_main.xml",
+      "selection": {
+        "end": {
+          "column": 52,
+          "index": 594,
+          "line": 14
+        },
+        "start": {
+          "column": 52,
+          "index": 594,
+          "line": 14
+        }
+      }
+    }
+  ],
+  "selectedFile": "/storage/emulated/0/AndroidIDEProjects/FingerSpy/app/src/main/res/layout/activity_main.xml"
+}

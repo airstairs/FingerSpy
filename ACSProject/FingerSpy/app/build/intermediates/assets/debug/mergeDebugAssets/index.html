@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Finger Spy</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            background-color: #020617;
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top HUD Header */
+        header {
+            position: relative;
+            z-index: 20;
+            background-color: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid rgba(6, 182, 212, 0.3);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        .hud-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hud-title-sub {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(6, 182, 212, 0.8);
+            font-weight: 700;
+        }
+
+        .hud-title-main {
+            font-size: 14px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        /* Status Pill */
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .pill-emerald {
+            background-color: #022c22;
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            color: #34d399;
+        }
+        .pill-emerald .status-dot { background-color: #34d399; }
+
+        .pill-cyan {
+            background-color: #083344;
+            border: 1px solid rgba(6, 182, 212, 0.5);
+            color: #22d3ee;
+        }
+        .pill-cyan .status-dot { background-color: #22d3ee; }
+
+        .pill-amber {
+            background-color: #451a03;
+            border: 1px solid rgba(245, 158, 11, 0.5);
+            color: #fbbf24;
+        }
+        .pill-amber .status-dot { background-color: #fbbf24; }
+
+        .pill-red {
+            background-color: #450a0a;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #f87171;
+        }
+        .pill-red .status-dot { background-color: #f87171; }
+
+        /* HUD Actions */
+        .hud-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .death-box {
+            text-align: right;
+        }
+
+        .death-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        .death-val {
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: 700;
+            color: #f87171;
+        }
+
+        .btn-icon {
+            background-color: #1e293b;
+            color: #22d3ee;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 8px;
+            padding: 6px 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-icon:active { transform: scale(0.95); }
+        .btn-icon.secondary { color: #94a3b8; border-color: #334155; }
+
+        /* Canvas Container */
+        main {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #020617;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* Overlay & Modal */
+        #overlay-screen {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(4px);
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-card {
+            max-width: 420px;
+            width: 100%;
+            background-color: #0f172a;
+            border: 1px solid rgba(6, 182, 212, 0.4);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .modal-accent-line {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #06b6d4, #6366f1, #06b6d4);
+        }
+
+        .modal-icon-bg {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .glow-cyan {
+            background-color: #083344;
+            border: 1px solid rgba(6, 182, 212, 0.5);
+            color: #22d3ee;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+        }
+
+        .glow-red {
+            background-color: #450a0a;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #f87171;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0 0 8px 0;
+        }
+
+        .modal-subtitle {
+            font-size: 13px;
+            color: #cbd5e1;
+            margin: 0 0 20px 0;
+            line-height: 1.5;
+        }
+
+        .callout-box {
+            width: 100%;
+            background-color: rgba(30, 41, 59, 0.8);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid #334155;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 20px;
+            text-align: left;
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 13px;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .modal-btn.cyan-btn { background: linear-gradient(90deg, #06b6d4, #2563eb); }
+        .modal-btn.red-btn { background: linear-gradient(90deg, #dc2626, #be123c); }
+        .modal-btn.green-btn { background: linear-gradient(90deg, #10b981, #0d9488); }
+        .modal-btn:active { transform: scale(0.96); }
+
+        /* Footer */
+        footer {
+            background-color: rgba(15, 23, 42, 0.95);
+            border-top: 1px solid #1e293b;
+            padding: 6px 16px;
+            font-size: 11px;
+            color: #94a3b8;
+            z-index: 20;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-link {
+            color: #22d3ee;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Screen Shake Animation */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake-screen { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+
+        .hidden { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <!-- HUD Header -->
+    <header>
+        <div class="hud-brand">
+            <!-- Embedded SVG Ninja Icon -->
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 3a2 2 0 1 1-2 2 2 2 0 0 1 2-2zm-6 8a6 6 0 0 1 12 0z"/>
+                <circle cx="9" cy="9" r="1" fill="#22d3ee"/>
+                <circle cx="15" cy="9" r="1" fill="#22d3ee"/>
+            </svg>
+            <div>
+                <div class="hud-title-sub">FINGER SPY</div>
+                <div class="hud-title-main" id="level-title">STAGE 1</div>
+            </div>
+        </div>
+
+        <!-- Status Indicator Pill -->
+        <div id="status-pill" class="status-pill pill-emerald">
+            <span class="status-dot"></span>
+            <span id="status-text">START IN ZONE</span>
+        </div>
+
+        <!-- Stats Counter & Controls -->
+        <div class="hud-actions">
+            <div class="death-box">
+                <div class="death-label">Deaths</div>
+                <div id="death-count" class="death-val">0</div>
+            </div>
+            <button id="btn-sound" class="btn-icon">
+                <svg id="sound-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+            </button>
+            <button id="btn-reset" class="btn-icon secondary" title="Reset Game Progress">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Game Viewport -->
+    <main id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Overlay Modal -->
+        <div id="overlay-screen">
+            <div class="modal-card">
+                <div class="modal-accent-line"></div>
+                <div id="modal-icon-bg" class="modal-icon-bg glow-cyan">
+                    <svg id="modal-svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a10 10 0 0 0-10 10c0 5.523 4.477 10 10 10s10-4.477 10-10A10 10 0 0 0 12 2z"></path>
+                        <path d="M12 6a6 6 0 0 0-6 6c0 3.314 2.686 6 6 6s6-2.686 6-6a6 6 0 0 0-6-6z"></path>
+                    </svg>
+                </div>
+
+                <h2 id="modal-title" class="modal-title">OPERATION: FINGER SPY</h2>
+                <p id="modal-subtitle" class="modal-subtitle">
+                    Place your finger on the green <strong style="color: #34d399;">START ZONE</strong> and hold down. Dodge all red security lasers and spinning saws to reach the extraction vault.
+                </p>
+
+                <div class="callout-box">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <div>
+                        <strong style="color: #67e8f9; display: block; margin-bottom: 2px;">Tactical Resume Mechanic:</strong>
+                        Lifting your finger freezes time! A marker token will be placed. Place your finger back on the token to unfreeze and resume.
+                    </div>
+                </div>
+
+                <button id="modal-btn" class="modal-btn cyan-btn">BEGIN MISSION</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <span>Touch Screen Supported</span>
+        <span id="offset-toggle-container" class="toggle-link">
+            Touch Offset: <strong id="offset-state">ON</strong>
+        </span>
+    </footer>
+
+    <script>
+        /**
+         * FINGER SPY - LOCAL ENGINE
+         */
+
+        // Native Audio Synthesizer via Web Audio API
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'start') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(783.99, now + 0.1); // G5
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } 
+            else if (type === 'freeze') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(329.63, now); // E4
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } 
+            else if (type === 'resume') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(493.88, now); // B4
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } 
+            else if (type === 'die') {
+                // Low tone + White noise burst
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(130.81, now); // C3
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+
+                // Noise
+                const bufferSize = audioCtx.sampleRate * 0.15;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                const noiseGain = audioCtx.createGain();
+                noiseGain.gain.setValueAtTime(0.15, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                noise.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noise.start(now);
+            } 
+            else if (type === 'win') {
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                    gain.gain.setValueAtTime(0.15, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.2);
+                });
+            }
+        }
+
+        // Canvas Setup & Scaling
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('game-container');
+
+        const GAME_WIDTH = 600;
+        const GAME_HEIGHT = 1000;
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        function resizeCanvas() {
+            const windowWidth = container.clientWidth;
+            const windowHeight = container.clientHeight;
+
+            canvas.width = windowWidth;
+            canvas.height = windowHeight;
+
+            const scaleX = windowWidth / GAME_WIDTH;
+            const scaleY = windowHeight / GAME_HEIGHT;
+            scale = Math.min(scaleX, scaleY);
+
+            offsetX = (windowWidth - (GAME_WIDTH * scale)) / 2;
+            offsetY = (windowHeight - (GAME_HEIGHT * scale)) / 2;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function getLogicalCoords(screenX, screenY) {
+            const rect = canvas.getBoundingClientRect();
+            const canvasX = screenX - rect.left - offsetX;
+            const canvasY = screenY - rect.top - offsetY;
+
+            return {
+                x: canvasX / scale,
+                y: canvasY / scale
+            };
+        }
+
+        // Game Configuration & State
+        let useTouchOffset = true;
+        const TOUCH_OFFSET_Y = -45;
+
+        let currentLevelIndex = 0;
+        let deathsCount = 0;
+        let gameState = 'UNSTARTED'; // UNSTARTED, ACTIVE, FROZEN, DEFEATED, LEVEL_COMPLETE
+
+        const player = {
+            x: 300,
+            y: 900,
+            radius: 12,
+            color: '#06b6d4',
+            trail: []
+        };
+
+        const markerToken = {
+            x: 0,
+            y: 0,
+            radius: 26,
+            active: false,
+            pulse: 0
+        };
+
+        let activeTouchId = null;
+
+        const LEVELS = [
+            {
+                name: "STAGE 1: LASER CORRIDOR",
+                startZone: { x: 220, y: 840, w: 160, h: 120 },
+                goalZone: { x: 200, y: 40, w: 200, h: 100 },
+                walls: [],
+                lasers: [
+                    { type: 'horizontal', y: 700, minX: 100, maxX: 500, speed: 2, currentX: 300, dir: 1 },
+                    { type: 'horizontal', y: 500, minX: 100, maxX: 500, speed: 3.5, currentX: 150, dir: 1 },
+                    { type: 'horizontal', y: 300, minX: 100, maxX: 500, speed: 4, currentX: 450, dir: -1 }
+                ],
+                saws: []
+            },
+            {
+                name: "STAGE 2: SAW BLADE ALLEY",
+                startZone: { x: 220, y: 860, w: 160, h: 100 },
+                goalZone: { x: 200, y: 40, w: 200, h: 100 },
+                walls: [
+                    { x: 0, y: 300, w: 180, h: 20 },
+                    { x: 420, y: 300, w: 180, h: 20 }
+                ],
+                lasers: [
+                    { type: 'horizontal', y: 720, minX: 80, maxX: 520, speed: 2.5, currentX: 100, dir: 1 }
+                ],
+                saws: [
+                    { x: 300, y: 550, radius: 35, angle: 0, speed: 0.05, movePath: { p1: {x: 100, y: 550}, p2: {x: 500, y: 550}, t: 0, speed: 0.008 } },
+                    { x: 200, y: 380, radius: 30, angle: 0, speed: -0.06, movePath: { p1: {x: 150, y: 380}, p2: {x: 450, y: 380}, t: 0.5, speed: 0.012 } },
+                    { x: 300, y: 200, radius: 45, angle: 0, speed: 0.04 }
+                ]
+            },
+            {
+                name: "STAGE 3: ROTATING GRID",
+                startZone: { x: 220, y: 860, w: 160, h: 100 },
+                goalZone: { x: 220, y: 40, w: 160, h: 100 },
+                walls: [],
+                lasers: [
+                    { type: 'rotating', cx: 300, cy: 650, length: 180, angle: 0, speed: 0.02 },
+                    { type: 'rotating', cx: 300, cy: 350, length: 220, angle: Math.PI / 2, speed: -0.025 },
+                    { type: 'horizontal', y: 200, minX: 50, maxX: 550, speed: 5, currentX: 100, dir: 1 }
+                ],
+                saws: [
+                    { x: 120, y: 500, radius: 28, angle: 0, speed: 0.05 },
+                    { x: 480, y: 500, radius: 28, angle: 0, speed: -0.05 }
+                ]
+            },
+            {
+                name: "STAGE 4: VAULT GAUNTLET",
+                startZone: { x: 220, y: 880, w: 160, h: 80 },
+                goalZone: { x: 220, y: 30, w: 160, h: 90 },
+                walls: [
+                    { x: 180, y: 700, w: 240, h: 15 },
+                    { x: 0, y: 450, w: 220, h: 15 },
+                    { x: 380, y: 450, w: 220, h: 15 }
+                ],
+                lasers: [
+                    { type: 'rotating', cx: 150, cy: 580, length: 130, angle: 0, speed: 0.035 },
+                    { type: 'rotating', cx: 450, cy: 580, length: 130, angle: Math.PI, speed: -0.035 },
+                    { type: 'horizontal', y: 320, minX: 50, maxX: 550, speed: 6, currentX: 300, dir: 1 },
+                    { type: 'rotating', cx: 300, cy: 220, length: 240, angle: 0, speed: 0.03 }
+                ],
+                saws: [
+                    { x: 300, y: 450, radius: 32, angle: 0, speed: 0.08 },
+                    { x: 300, y: 790, radius: 25, angle: 0, speed: -0.05, movePath: { p1: {x: 80, y: 790}, p2: {x: 520, y: 790}, t: 0, speed: 0.015 } }
+                ]
+            }
+        ];
+
+        function loadSavedState() {
+            try {
+                const savedLevel = localStorage.getItem('finger_spy_level');
+                const savedDeaths = localStorage.getItem('finger_spy_deaths');
+                if (savedLevel !== null) currentLevelIndex = Math.min(parseInt(savedLevel, 10), LEVELS.length - 1);
+                if (savedDeaths !== null) deathsCount = parseInt(savedDeaths, 10);
+            } catch(e) {}
+            document.getElementById('death-count').innerText = deathsCount;
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem('finger_spy_level', currentLevelIndex);
+                localStorage.setItem('finger_spy_deaths', deathsCount);
+            } catch(e) {}
+            document.getElementById('death-count').innerText = deathsCount;
+        }
+
+        function loadLevel(idx) {
+            currentLevelIndex = idx;
+            const level = LEVELS[currentLevelIndex];
+            document.getElementById('level-title').innerText = level.name;
+
+            player.x = level.startZone.x + level.startZone.w / 2;
+            player.y = level.startZone.y + level.startZone.h / 2;
+            player.trail = [];
+
+            markerToken.active = false;
+            markerToken.x = player.x;
+            markerToken.y = player.y;
+
+            gameState = 'UNSTARTED';
+            updateStatusUI('START IN ZONE', 'pill-emerald');
+            saveState();
+        }
+
+        function updateStatusUI(text, pillClass) {
+            const pill = document.getElementById('status-pill');
+            const statusText = document.getElementById('status-text');
+            pill.className = `status-pill ${pillClass}`;
+            statusText.innerText = text;
+        }
+
+        function showModal(title, subtitle, btnText, theme) {
+            const overlay = document.getElementById('overlay-screen');
+            const modalTitle = document.getElementById('modal-title');
+            const modalSub = document.getElementById('modal-subtitle');
+            const modalIconBg = document.getElementById('modal-icon-bg');
+            const modalBtn = document.getElementById('modal-btn');
+
+            modalTitle.innerText = title;
+            modalSub.innerHTML = subtitle;
+            modalBtn.innerText = btnText;
+
+            if (theme === 'red') {
+                modalIconBg.className = "modal-icon-bg glow-red";
+                modalBtn.className = "modal-btn red-btn";
+            } else if (theme === 'green') {
+                modalIconBg.className = "modal-icon-bg glow-cyan";
+                modalBtn.className = "modal-btn green-btn";
+            } else {
+                modalIconBg.className = "modal-icon-bg glow-cyan";
+                modalBtn.className = "modal-btn cyan-btn";
+            }
+
+            overlay.classList.remove('hidden');
+        }
+
+        function hideModal() {
+            document.getElementById('overlay-screen').classList.add('hidden');
+        }
+
+        function isPointInStartZone(pt, level) {
+            const sz = level.startZone;
+            return (pt.x >= sz.x && pt.x <= sz.x + sz.w && pt.y >= sz.y && pt.y <= sz.y + sz.h);
+        }
+
+        function isPointNearMarker(pt) {
+            if (!markerToken.active) return false;
+            const dx = pt.x - markerToken.x;
+            const dy = pt.y - markerToken.y;
+            return Math.sqrt(dx * dx + dy * dy) <= markerToken.radius + 15;
+        }
+
+        function handlePointerDown(screenX, screenY, id) {
+            if (gameState === 'DEFEATED' || gameState === 'LEVEL_COMPLETE') return;
+
+            activeTouchId = id;
+            let coords = getLogicalCoords(screenX, screenY);
+            if (useTouchOffset) coords.y += TOUCH_OFFSET_Y;
+
+            const level = LEVELS[currentLevelIndex];
+
+            if (gameState === 'UNSTARTED') {
+                if (isPointInStartZone(coords, level)) {
+                    gameState = 'ACTIVE';
+                    player.x = coords.x;
+                    player.y = coords.y;
+                    markerToken.active = false;
+                    updateStatusUI('AGENT ACTIVE', 'pill-cyan');
+                    playSound('start');
+                }
+            } 
+            else if (gameState === 'FROZEN') {
+                if (isPointNearMarker(coords)) {
+                    gameState = 'ACTIVE';
+                    markerToken.active = false;
+                    player.x = coords.x;
+                    player.y = coords.y;
+                    updateStatusUI('AGENT ACTIVE', 'pill-cyan');
+                    playSound('resume');
+                }
+            }
+        }
+
+        function handlePointerMove(screenX, screenY, id) {
+            if (activeTouchId !== null && id !== activeTouchId) return;
+            if (gameState !== 'ACTIVE') return;
+
+            let coords = getLogicalCoords(screenX, screenY);
+            if (useTouchOffset) coords.y += TOUCH_OFFSET_Y;
+
+            player.x = Math.max(10, Math.min(GAME_WIDTH - 10, coords.x));
+            player.y = Math.max(10, Math.min(GAME_HEIGHT - 10, coords.y));
+
+            player.trail.push({ x: player.x, y: player.y });
+            if (player.trail.length > 12) player.trail.shift();
+        }
+
+        function handlePointerUp(id) {
+            if (activeTouchId !== null && id !== activeTouchId) return;
+            activeTouchId = null;
+
+            if (gameState === 'ACTIVE') {
+                gameState = 'FROZEN';
+                markerToken.x = player.x;
+                markerToken.y = player.y;
+                markerToken.active = true;
+                updateStatusUI('PAUSED - TOUCH MARKER', 'pill-amber');
+                playSound('freeze');
+            }
+        }
+
+        // Touch Events
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            handlePointerDown(touch.clientX, touch.clientY, touch.identifier);
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === activeTouchId) {
+                    handlePointerMove(touch.clientX, touch.clientY, touch.identifier);
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === activeTouchId) {
+                    handlePointerUp(e.changedTouches[i].identifier);
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchcancel', () => handlePointerUp(activeTouchId));
+
+        // Mouse Events
+        let isMouseDown = false;
+        canvas.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            handlePointerDown(e.clientX, e.clientY, 'mouse');
+        });
+        canvas.addEventListener('mousemove', (e) => {
+            if (isMouseDown) handlePointerMove(e.clientX, e.clientY, 'mouse');
+        });
+        canvas.addEventListener('mouseup', () => {
+            isMouseDown = false;
+            handlePointerUp('mouse');
+        });
+
+        // Collision Logic
+        function checkCollisions() {
+            if (gameState !== 'ACTIVE') return;
+
+            const level = LEVELS[currentLevelIndex];
+
+            // 1. Walls
+            for (let wall of level.walls) {
+                if (player.x + player.radius > wall.x &&
+                    player.x - player.radius < wall.x + wall.w &&
+                    player.y + player.radius > wall.y &&
+                    player.y - player.radius < wall.y + wall.h) {
+                    triggerDeath("Collided with security barrier!");
+                    return;
+                }
+            }
+
+            // 2. Lasers
+            for (let laser of level.lasers) {
+                if (laser.type === 'horizontal') {
+                    const lineY = laser.y;
+                    const minX = Math.min(laser.currentX, laser.currentX + 180);
+                    const maxX = Math.max(laser.currentX, laser.currentX + 180);
+
+                    if (player.y + player.radius >= lineY - 4 && player.y - player.radius <= lineY + 4) {
+                        if (player.x >= minX - 5 && player.x <= maxX + 5) {
+                            triggerDeath("Intercepted by dynamic laser beam!");
+                            return;
+                        }
+                    }
+                } else if (laser.type === 'rotating') {
+                    const x1 = laser.cx - Math.cos(laser.angle) * (laser.length / 2);
+                    const y1 = laser.cy - Math.sin(laser.angle) * (laser.length / 2);
+                    const x2 = laser.cx + Math.cos(laser.angle) * (laser.length / 2);
+                    const y2 = laser.cy + Math.sin(laser.angle) * (laser.length / 2);
+
+                    if (distToSegment({ x: player.x, y: player.y }, { x: x1, y: y1 }, { x: x2, y: y2 }) < player.radius + 3) {
+                        triggerDeath("Sliced by rotating laser turret!");
+                        return;
+                    }
+                }
+            }
+
+            // 3. Saw Blades
+            for (let saw of level.saws) {
+                const dx = player.x - saw.x;
+                const dy = player.y - saw.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < player.radius + saw.radius - 2) {
+                    triggerDeath("Neutralized by serrated saw blade!");
+                    return;
+                }
+            }
+
+            // 4. Extraction Goal
+            const gz = level.goalZone;
+            if (player.x >= gz.x && player.x <= gz.x + gz.w &&
+                player.y >= gz.y && player.y <= gz.y + gz.h) {
+                triggerVictory();
+            }
+        }
+
+        function distToSegment(p, v, w) {
+            const l2 = (w.x - v.x) ** 2 + (w.y - v.y) ** 2;
+            if (l2 === 0) return Math.sqrt((p.x - v.x) ** 2 + (p.y - v.y) ** 2);
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.sqrt((p.x - (v.x + t * (w.x - v.x))) ** 2 + (p.y - (v.y + t * (w.y - v.y))) ** 2);
+        }
+
+        function triggerDeath(reason) {
+            gameState = 'DEFEATED';
+            deathsCount++;
+            saveState();
+
+            playSound('die');
+            updateStatusUI('AGENT ELIMINATED', 'pill-red');
+
+            document.getElementById('game-container').classList.add('shake-screen');
+            setTimeout(() => {
+                document.getElementById('game-container').classList.remove('shake-screen');
+            }, 300);
+
+            showModal('FINGER SPY DOWN!', `${reason}<br><br><span style="font-size: 11px; color: #94a3b8;">Finger contact broken. Retrying stage...</span>`, 'TRY AGAIN', 'red');
+        }
+
+        function triggerVictory() {
+            gameState = 'LEVEL_COMPLETE';
+            playSound('win');
+            updateStatusUI('EXTRACTION SUCCESS', 'pill-emerald');
+
+            if (currentLevelIndex < LEVELS.length - 1) {
+                showModal('EXTRACTION SUCCESSFUL', `Security bypassed cleanly! Stage ${currentLevelIndex + 1} clear. Prepare for next zone.`, 'NEXT STAGE', 'green');
+            } else {
+                showModal('MISSION ACCOMPLISHED', `All security sectors cleared! You are the Ultimate Finger Spy.<br><span style="font-size: 11px; color: #67e8f9; margin-top: 8px; display: block;">Total Deaths: ${deathsCount}</span>`, 'REPLAY GAME', 'green');
+            }
+        }
+
+        function updateHazards() {
+            if (gameState !== 'ACTIVE') return;
+
+            const level = LEVELS[currentLevelIndex];
+
+            for (let laser of level.lasers) {
+                if (laser.type === 'horizontal') {
+                    laser.currentX += laser.speed * laser.dir;
+                    if (laser.currentX > laser.maxX || laser.currentX < laser.minX) {
+                        laser.dir *= -1;
+                    }
+                } else if (laser.type === 'rotating') {
+                    laser.angle += laser.speed;
+                }
+            }
+
+            for (let saw of level.saws) {
+                saw.angle += saw.speed;
+                if (saw.movePath) {
+                    saw.movePath.t += saw.movePath.speed;
+                    if (saw.movePath.t > 1 || saw.movePath.t < 0) {
+                        saw.movePath.speed *= -1;
+                    }
+                    const p1 = saw.movePath.p1;
+                    const p2 = saw.movePath.p2;
+                    saw.x = p1.x + (p2.x - p1.x) * saw.movePath.t;
+                    saw.y = p1.y + (p2.y - p1.y) * saw.movePath.t;
+                }
+            }
+
+            markerToken.pulse += 0.05;
+        }
+
+        // Render Loop
+        function render() {
+            ctx.save();
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(scale, scale);
+
+            // Grid Background
+            ctx.strokeStyle = 'rgba(6, 182, 212, 0.05)';
+            ctx.lineWidth = 1;
+            const gridSize = 40;
+            for (let x = 0; x <= GAME_WIDTH; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, GAME_HEIGHT);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= GAME_HEIGHT; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(GAME_WIDTH, y);
+                ctx.stroke();
+            }
+
+            // Outer Boundary
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 3;
+            ctx.shadowColor = '#06b6d4';
+            ctx.shadowBlur = 10;
+            ctx.strokeRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            ctx.shadowBlur = 0;
+
+            const level = LEVELS[currentLevelIndex];
+
+            // 1. Start Zone
+            const sz = level.startZone;
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+            ctx.fillRect(sz.x, sz.y, sz.w, sz.h);
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 4]);
+            ctx.strokeRect(sz.x, sz.y, sz.w, sz.h);
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(gameState === 'UNSTARTED' ? 'TOUCH & HOLD HERE' : 'START ZONE', sz.x + sz.w/2, sz.y + sz.h/2 + 5);
+
+            // 2. Goal Zone
+            const gz = level.goalZone;
+            ctx.fillStyle = 'rgba(6, 182, 212, 0.2)';
+            ctx.fillRect(gz.x, gz.y, gz.w, gz.h);
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(gz.x, gz.y, gz.w, gz.h);
+            ctx.fillStyle = '#06b6d4';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText('EXTRACTION VAULT', gz.x + gz.w/2, gz.y + gz.h/2 + 6);
+
+            // 3. Solid Walls
+            ctx.fillStyle = '#334155';
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+            for (let wall of level.walls) {
+                ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+                ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
+            }
+
+            // 4. Lasers
+            for (let laser of level.lasers) {
+                ctx.save();
+                ctx.strokeStyle = '#ef4444';
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 15;
+                ctx.lineWidth = 5;
+
+                if (laser.type === 'horizontal') {
+                    const startX = laser.currentX;
+                    const endX = laser.currentX + 180;
+                    ctx.beginPath();
+                    ctx.moveTo(startX, laser.y);
+                    ctx.lineTo(endX, laser.y);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#f87171';
+                    ctx.beginPath();
+                    ctx.arc(startX, laser.y, 6, 0, Math.PI * 2);
+                    ctx.arc(endX, laser.y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (laser.type === 'rotating') {
+                    const x1 = laser.cx - Math.cos(laser.angle) * (laser.length / 2);
+                    const y1 = laser.cy - Math.sin(laser.angle) * (laser.length / 2);
+                    const x2 = laser.cx + Math.cos(laser.angle) * (laser.length / 2);
+                    const y2 = laser.cy + Math.sin(laser.angle) * (laser.length / 2);
+
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#991b1b';
+                    ctx.beginPath();
+                    ctx.arc(laser.cx, laser.cy, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            // 5. Saw Blades
+            for (let saw of level.saws) {
+                ctx.save();
+                ctx.translate(saw.x, saw.y);
+                ctx.rotate(saw.angle);
+
+                ctx.fillStyle = '#475569';
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, saw.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                const teeth = 8;
+                ctx.fillStyle = '#e2e8f0';
+                for (let i = 0; i < teeth; i++) {
+                    const a = (i / teeth) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(a) * saw.radius, Math.sin(a) * saw.radius);
+                    ctx.lineTo(Math.cos(a + 0.2) * (saw.radius + 8), Math.sin(a + 0.2) * (saw.radius + 8));
+                    ctx.lineTo(Math.cos(a + 0.3) * saw.radius, Math.sin(a + 0.3) * saw.radius);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.arc(0, 0, saw.radius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            // 6. Resume Marker
+            if (markerToken.active || gameState === 'FROZEN') {
+                const p = Math.sin(Date.now() * 0.008) * 4;
+                ctx.save();
+                ctx.translate(markerToken.x, markerToken.y);
+
+                ctx.strokeStyle = 'rgba(6, 182, 212, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, markerToken.radius + p, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
+                ctx.beginPath();
+                ctx.arc(0, 0, markerToken.radius + 10 + p, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.fillStyle = '#0891b2';
+                ctx.shadowColor = '#06b6d4';
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(0, 0, 14, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, 0, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#22d3ee';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('TOUCH TO RESUME', 0, -markerToken.radius - 12);
+
+                ctx.restore();
+            }
+
+            // 7. Player Node & Trail
+            if (gameState === 'ACTIVE' || gameState === 'FROZEN') {
+                ctx.strokeStyle = 'rgba(6, 182, 212, 0.3)';
+                ctx.lineWidth = player.radius * 1.5;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                for (let i = 0; i < player.trail.length; i++) {
+                    const pt = player.trail[i];
+                    if (i === 0) ctx.moveTo(pt.x, pt.y);
+                    else ctx.lineTo(pt.x, pt.y);
+                }
+                ctx.stroke();
+
+                ctx.save();
+                ctx.shadowColor = '#06b6d4';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = player.color;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (useTouchOffset && gameState === 'ACTIVE') {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.setLineDash([2, 4]);
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(player.x, player.y + player.radius);
+                    ctx.lineTo(player.x, player.y - TOUCH_OFFSET_Y);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            updateHazards();
+            checkCollisions();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function() {
+            resizeCanvas();
+            loadSavedState();
+            loadLevel(currentLevelIndex);
+
+            requestAnimationFrame(gameLoop);
+
+            document.getElementById('modal-btn').addEventListener('click', () => {
+                hideModal();
+                if (gameState === 'LEVEL_COMPLETE') {
+                    if (currentLevelIndex < LEVELS.length - 1) {
+                        loadLevel(currentLevelIndex + 1);
+                    } else {
+                        loadLevel(0);
+                    }
+                } else {
+                    loadLevel(currentLevelIndex);
+                }
+            });
+
+            document.getElementById('btn-sound').addEventListener('click', () => {
+                soundEnabled = !soundEnabled;
+                const svg = document.getElementById('sound-svg');
+                if (soundEnabled) {
+                    svg.innerHTML = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>`;
+                    document.getElementById('btn-sound').style.color = '#22d3ee';
+                } else {
+                    svg.innerHTML = `<line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v6a2 2 0 0 0 2 2h1l5 5V3L9 9z"></path>`;
+                    document.getElementById('btn-sound').style.color = '#64748b';
+                }
+            });
+
+            document.getElementById('btn-reset').addEventListener('click', () => {
+                if (confirm("Reset Finger Spy progress back to Stage 1?")) {
+                    deathsCount = 0;
+                    loadLevel(0);
+                }
+            });
+
+            document.getElementById('offset-toggle-container').addEventListener('click', () => {
+                useTouchOffset = !useTouchOffset;
+                document.getElementById('offset-state').innerText = useTouchOffset ? 'ON' : 'OFF';
+            });
+        };
+    </script>
+</body>
+</html>
